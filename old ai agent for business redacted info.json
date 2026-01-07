@@ -1,0 +1,435 @@
+{
+  "name": "phone backend",
+  "nodes": [
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "[REDACTED_GOOGLE_CALENDAR_ID]",
+          "mode": "list",
+          "cachedResultName": "[REDACTED_CALENDAR_NAME]"
+        },
+        "start": "={{ $json.start.dateTime }}",
+        "end": "={{ $json.end.dateTime }}",
+        "additionalFields": {
+          "attendees": [],
+          "summary": "={{ $json.summary }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [-1360, 272],
+      "id": "[REDACTED_NODE_ID_1]",
+      "name": "Create an event",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "[REDACTED_CREDENTIAL_ID]",
+          "name": "[REDACTED_CREDENTIAL_NAME]"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "[REDACTED_GOOGLE_SHEET_ID]",
+          "mode": "list",
+          "cachedResultName": "[REDACTED_SHEET_NAME]",
+          "cachedResultUrl": "[REDACTED_URL]"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "[REDACTED_SHEET_TAB_ID_OR_NAME]",
+          "mode": "list",
+          "cachedResultName": "Full Call Logs",
+          "cachedResultUrl": "[REDACTED_URL]"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Caller Name": "={{ $('Switch1').item.json.body.message.toolCalls[0].function.arguments.name }}",
+            "Phone Number": "={{ $('Switch1').item.json.body.message.toolCalls[0].function.arguments.phone }}",
+            "Reason for Call": "={{ $('Switch1').item.json.body.message.toolCalls[0].function.arguments.intent }}",
+            "Outcome": "={{ $('Switch1').item.json.body.message.toolCalls[0].function.name }}",
+            "booked service": "={{ $('Switch1').item.json.body.message.toolCalls[0].function.arguments.service }}",
+            "Booked Time": "={{ $('Switch1').item.json.body.message.toolCalls[0].function.arguments.date }}    {{ $('Switch1').item.json.body.message.toolCalls[0].function.arguments.time }}",
+            "Event ID": "={{ $json.id }}",
+            "Timestamp": "={{ $now }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Timestamp", "displayName": "Timestamp", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Caller Name", "displayName": "Caller Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Phone Number", "displayName": "Phone Number", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Reason for Call", "displayName": "Reason for Call", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Outcome", "displayName": "Outcome", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "booked service", "displayName": "booked service", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Booked Time", "displayName": "Booked Time", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Event ID", "displayName": "Event ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Notes / Comments", "displayName": "Notes / Comments", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": true }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [-1168, 272],
+      "id": "[REDACTED_NODE_ID_2]",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "[REDACTED_CREDENTIAL_ID]",
+          "name": "[REDACTED_CREDENTIAL_NAME]"
+        }
+      }
+    },
+
+    {
+      "parameters": { "jsCode": "[REDACTED_CODE_BLOCK_1]" },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1552, 272],
+      "id": "[REDACTED_NODE_ID_3]",
+      "name": "Code"
+    },
+
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "[REDACTED_GOOGLE_CALENDAR_ID]",
+          "mode": "list",
+          "cachedResultName": "[REDACTED_CALENDAR_NAME]"
+        },
+        "eventId": "={{ $json['Event ID'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [-1168, 480],
+      "id": "[REDACTED_NODE_ID_4]",
+      "name": "Delete an event",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "[REDACTED_CREDENTIAL_ID]",
+          "name": "[REDACTED_CREDENTIAL_NAME]"
+        }
+      }
+    },
+
+    {
+      "parameters": { "jsCode": "[REDACTED_CODE_BLOCK_2]" },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-976, 480],
+      "id": "[REDACTED_NODE_ID_5]",
+      "name": "datetime code"
+    },
+
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "[REDACTED_GOOGLE_CALENDAR_ID]",
+          "mode": "list",
+          "cachedResultName": "[REDACTED_CALENDAR_NAME]"
+        },
+        "start": "={{ $json.start.dateTime }}",
+        "end": "={{ $json.end.dateTime }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [-784, 480],
+      "id": "[REDACTED_NODE_ID_6]",
+      "name": "Update Calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "[REDACTED_CREDENTIAL_ID]",
+          "name": "[REDACTED_CREDENTIAL_NAME]"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "[REDACTED_GOOGLE_CALENDAR_ID]",
+          "mode": "list",
+          "cachedResultName": "[REDACTED_CALENDAR_NAME]"
+        },
+        "timeMin": "={{$json.date + 'T00:00:00+01:00'}}",
+        "timeMax": "={{ $json.date + 'T23:59:59+01:00' }}",
+        "options": { "outputFormat": "bookedSlots" }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [-1360, 912],
+      "id": "[REDACTED_NODE_ID_7]",
+      "name": "Get availability in a calendar",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "[REDACTED_CREDENTIAL_ID]",
+          "name": "[REDACTED_CREDENTIAL_NAME]"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=[REDACTED_WEBHOOK_RESPONSE_BODY_1]",
+        "options": { "responseCode": 200 }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [-976, 272],
+      "id": "[REDACTED_NODE_ID_8]",
+      "name": "Respond to Webhook"
+    },
+
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=[REDACTED_WEBHOOK_RESPONSE_BODY_2]",
+        "options": { "responseCode": 200 }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [-976, 912],
+      "id": "[REDACTED_NODE_ID_9]",
+      "name": "Respond to Webhook1"
+    },
+
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=[REDACTED_WEBHOOK_RESPONSE_BODY_3]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [-384, 480],
+      "id": "[REDACTED_NODE_ID_10]",
+      "name": "Respond to Webhook2"
+    },
+
+    {
+      "parameters": { "jsCode": "[REDACTED_CODE_BLOCK_3]" },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1168, 912],
+      "id": "[REDACTED_NODE_ID_11]",
+      "name": "filter out any taken times"
+    },
+
+    {
+      "parameters": { "jsCode": "[REDACTED_CODE_BLOCK_4]" },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1552, 912],
+      "id": "[REDACTED_NODE_ID_12]",
+      "name": "set time"
+    },
+
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": { "__rl": true, "value": "[REDACTED_GOOGLE_CALENDAR_ID]", "mode": "list", "cachedResultName": "[REDACTED_CALENDAR_NAME]" },
+        "eventId": "={{ $json['Event ID'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [-1168, 704],
+      "id": "[REDACTED_NODE_ID_13]",
+      "name": "Delete an event1",
+      "credentials": {
+        "googleCalendarOAuth2Api": { "id": "[REDACTED_CREDENTIAL_ID]", "name": "[REDACTED_CREDENTIAL_NAME]" }
+      }
+    },
+
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "value": "[REDACTED_GOOGLE_SHEET_ID]", "mode": "list", "cachedResultName": "[REDACTED_SHEET_NAME]", "cachedResultUrl": "[REDACTED_URL]" },
+        "sheetName": { "__rl": true, "value": "[REDACTED_SHEET_TAB_ID_OR_NAME]", "mode": "list", "cachedResultName": "Full Call Logs", "cachedResultUrl": "[REDACTED_URL]" },
+        "filtersUI": {
+          "values": [
+            { "lookupColumn": "Booked Time", "lookupValue": "={{ $json.cancelDateTime }}" },
+            { "lookupColumn": "Phone Number", "lookupValue": "={{ $('Webhook1').item.json.body.message.toolCalls[0].function.arguments.phone }}" }
+          ]
+        },
+        "combineFilters": "OR",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [-1360, 704],
+      "id": "[REDACTED_NODE_ID_14]",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "[REDACTED_CREDENTIAL_ID]", "name": "[REDACTED_CREDENTIAL_NAME]" }
+      }
+    },
+
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=[REDACTED_WEBHOOK_RESPONSE_BODY_4]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [-784, 704],
+      "id": "[REDACTED_NODE_ID_15]",
+      "name": "Respond to Webhook3"
+    },
+
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "[REDACTED_WEBHOOK_PATH]",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-2144, 672],
+      "id": "[REDACTED_NODE_ID_16]",
+      "name": "Webhook1",
+      "webhookId": "[REDACTED_WEBHOOK_ID]"
+    },
+
+    {
+      "parameters": {
+        "rules": { "values": "[REDACTED_SWITCH_RULES]" },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-1920, 640],
+      "id": "[REDACTED_NODE_ID_17]",
+      "name": "Switch1"
+    },
+
+    {
+      "parameters": { "jsCode": "[REDACTED_CODE_BLOCK_5]" },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1552, 704],
+      "id": "[REDACTED_NODE_ID_18]",
+      "name": "time convert"
+    },
+
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "[REDACTED_GOOGLE_SHEET_ID]", "mode": "list", "cachedResultName": "[REDACTED_SHEET_NAME]", "cachedResultUrl": "[REDACTED_URL]" },
+        "sheetName": { "__rl": true, "value": "[REDACTED_SHEET_TAB_ID_OR_NAME]", "mode": "list", "cachedResultName": "Full Call Logs", "cachedResultUrl": "[REDACTED_URL]" },
+        "columns": { "mappingMode": "defineBelow", "value": "[REDACTED_COLUMN_MAPPINGS]", "matchingColumns": ["Event ID"], "schema": "[REDACTED_SCHEMA]" },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-976, 704],
+      "id": "[REDACTED_NODE_ID_19]",
+      "name": "Append or update row in sheet",
+      "credentials": { "googleSheetsOAuth2Api": { "id": "[REDACTED_CREDENTIAL_ID]", "name": "[REDACTED_CREDENTIAL_NAME]" } }
+    },
+
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "value": "[REDACTED_GOOGLE_SHEET_ID]", "mode": "list", "cachedResultName": "[REDACTED_SHEET_NAME]", "cachedResultUrl": "[REDACTED_URL]" },
+        "sheetName": { "__rl": true, "value": "[REDACTED_SHEET_TAB_ID_OR_NAME]", "mode": "list", "cachedResultName": "Full Call Logs", "cachedResultUrl": "[REDACTED_URL]" },
+        "filtersUI": {
+          "values": [
+            { "lookupColumn": "Booked Time", "lookupValue": "={{ $json.originalDateTime }}" },
+            { "lookupColumn": "Phone Number", "lookupValue": "={{ $('Webhook1').item.json.body.message.toolCalls[0].function.arguments.phone }}" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [-1360, 480],
+      "id": "[REDACTED_NODE_ID_20]",
+      "name": "Get row(s) in sheet2",
+      "credentials": { "googleSheetsOAuth2Api": { "id": "[REDACTED_CREDENTIAL_ID]", "name": "[REDACTED_CREDENTIAL_NAME]" } }
+    },
+
+    {
+      "parameters": { "jsCode": "[REDACTED_CODE_BLOCK_6]" },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1552, 480],
+      "id": "[REDACTED_NODE_ID_21]",
+      "name": "time convert2"
+    },
+
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "[REDACTED_GOOGLE_SHEET_ID]", "mode": "list", "cachedResultName": "[REDACTED_SHEET_NAME]", "cachedResultUrl": "[REDACTED_URL]" },
+        "sheetName": { "__rl": true, "value": "[REDACTED_SHEET_TAB_ID_OR_NAME]", "mode": "list", "cachedResultName": "Full Call Logs", "cachedResultUrl": "[REDACTED_URL]" },
+        "columns": { "mappingMode": "defineBelow", "value": "[REDACTED_COLUMN_MAPPINGS]", "matchingColumns": [], "schema": "[REDACTED_SCHEMA]" },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [-592, 480],
+      "id": "[REDACTED_NODE_ID_22]",
+      "name": "Append row in sheet1",
+      "credentials": { "googleSheetsOAuth2Api": { "id": "[REDACTED_CREDENTIAL_ID]", "name": "[REDACTED_CREDENTIAL_NAME]" } }
+    },
+
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "[REDACTED_GOOGLE_SHEET_ID]", "mode": "list", "cachedResultName": "[REDACTED_SHEET_NAME]", "cachedResultUrl": "[REDACTED_URL]" },
+        "sheetName": { "__rl": true, "value": "[REDACTED_SHEET_TAB_ID_OR_NAME]", "mode": "list", "cachedResultName": "Human Follow-Up Needed", "cachedResultUrl": "[REDACTED_URL]" },
+        "columns": { "mappingMode": "defineBelow", "value": {}, "matchingColumns": [], "schema": "[REDACTED_SCHEMA]" },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-1552, 1136],
+      "id": "[REDACTED_NODE_ID_23]",
+      "name": "Append row in sheet2",
+      "credentials": { "googleSheetsOAuth2Api": { "id": "[REDACTED_CREDENTIAL_ID]", "name": "[REDACTED_CREDENTIAL_NAME]" } }
+    },
+
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=[REDACTED_WEBHOOK_RESPONSE_BODY_5]",
+        "options": { "responseCode": 200 }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [-1360, 1136],
+      "id": "[REDACTED_NODE_ID_24]",
+      "name": "Respond to Webhook4"
+    }
+  ],
+  "pinData": {},
+  "connections": "[REDACTED_CONNECTIONS_GRAPH]",
+  "active": true,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "[REDACTED_VERSION_ID]",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "[REDACTED_INSTANCE_ID]"
+  },
+  "id": "[REDACTED_WORKFLOW_ID]",
+  "tags": []
+}
