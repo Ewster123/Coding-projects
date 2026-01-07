@@ -1,0 +1,187 @@
+"""
+Garage access backend.
+
+This handles the logic for a single lane:
+- detect vehicle
+- read number plate
+- wait for card tap
+- open barrier
+- close once vehicle has passed
+
+All hardware is behind interfaces so the logic stays the same
+even if the actual cameras / barriers change.
+"""
+
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Optional, Dict
+from datetime import datetime, timezone, timedelta
+import uuid
+import logging
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("garage")
+
+
+# -------------------- Hardware abstractions --------------------
+# These would be replaced with real drivers per site.
+# I used mocks while testing locally.
+
+class BarrierController:
+    def open(self, lane_id: str): ...
+    def close(self, lane_id: str): ...
+    def stop(self, lane_id: str): ...
+    def status(self, lane_id: str) -> str: ...
+
+
+class LoopSensor:
+    def is_vehicle_present(self, lane_id: str) -> bool: ...
+
+
+class ANPRService:
+    def read_plate(self, lane_id: str) -> Optional[dict]: ...
+
+
+class PaymentService:
+    def authorise(self, token: str, amount_pence: int) -> bool: ...
+
+
+# -------------------- State model --------------------
+
+class LaneState(str, Enum):
+    IDLE = "idle"
+    VEHICLE_DETECTED = "vehicle_detected"
+    WAITING_FOR_PLATE = "waiting_for_plate"
+    WAITING_FOR_PAYMENT = "waiting_for_payment"
+    AUTHORISED = "authorised"
+    BARRIER_OPEN = "barrier_open"
+    VEHICLE_PASSING = "vehicle_passing"
+    CLOSING = "closing"
+    COMPLETE = "complete"
+    ERROR = "error"
+
+
+@dataclass
+class LaneSession:
+    lane_id: str
+    session_id: str = field(default_factory=lambda: "sess_" + uuid.uuid4().hex)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    state: LaneState = LaneState.IDLE
+
+    plate: Optional[str] = None
+    payment_token: Optional[str] = None
+    authorised: bool = False
+
+    # simple timeout so sessions don’t get stuck forever
+    expires_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc) + timedelta(seconds=45)
+    )
+
+    def refresh_timeout(self, seconds: int = 45):
+        self.expires_at = datetime.now(timezone.utc) + timedelta(seconds=seconds)
+
+
+# -------------------- Core backend --------------------
+
+class GarageBackend:
+    def __init__(self, barrier, loop, anpr, payments):
+        self.barrier = barrier
+        self.loop = loop
+        self.anpr = anpr
+        self.payments = payments
+        self.sessions: Dict[str, LaneSession] = {}
+
+    def _get_session(self, lane_id: str) -> LaneSession:
+        if lane_id not in self.sessions:
+            self.sessions[lane_id] = LaneSession(lane_id=lane_id)
+        return self.sessions[lane_id]
+
+    def tick(self, lane_id: str):
+        """
+        Called on a short interval (or from events).
+        Drives the state machine forward.
+        """
+        session = self._get_session(lane_id)
+
+        # timeout protection
+        if datetime.now(timezone.utc) > session.expires_at:
+            log.warning(f"[{lane_id}] session timed out")
+            self._fail_safe(session, "timeout")
+            return
+
+        # idle -> vehicle detected
+        if session.state == LaneState.IDLE:
+            if self.loop.is_vehicle_present(lane_id):
+                session.state = LaneState.VEHICLE_DETECTED
+                session.refresh_timeout()
+                log.info(f"[{lane_id}] vehicle detected")
+
+        # read plate
+        if session.state == LaneState.VEHICLE_DETECTED:
+            session.state = LaneState.WAITING_FOR_PLATE
+
+        if session.state == LaneState.WAITING_FOR_PLATE:
+            plate_data = self.anpr.read_plate(lane_id)
+            if plate_data and plate_data.get("confidence", 0) >= 0.85:
+                session.plate = plate_data["plate"]
+                session.state = LaneState.WAITING_FOR_PAYMENT
+                session.refresh_timeout()
+                log.info(f"[{lane_id}] plate read: {session.plate}")
+
+        # once barrier is open, wait for car to pass
+        if session.state == LaneState.BARRIER_OPEN:
+            session.state = LaneState.VEHICLE_PASSING
+            session.refresh_timeout(30)
+
+        if session.state == LaneState.VEHICLE_PASSING:
+            if not self.loop.is_vehicle_present(lane_id):
+                log.info(f"[{lane_id}] vehicle clear, closing barrier")
+                self.barrier.close(lane_id)
+                session.state = LaneState.CLOSING
+                session.refresh_timeout(15)
+
+        if session.state == LaneState.CLOSING:
+            if self.barrier.status(lane_id) == "closed":
+                session.state = LaneState.COMPLETE
+
+        # reset lane once done
+        if session.state == LaneState.COMPLETE:
+            self.sessions[lane_id] = LaneSession(lane_id=lane_id)
+
+    def on_card_tap(self, lane_id: str, token: str):
+        """
+        Called by the card reader system once it has a token.
+        No raw card data ever touches this backend.
+        """
+        session = self._get_session(lane_id)
+
+        if session.state != LaneState.WAITING_FOR_PAYMENT:
+            log.info(f"[{lane_id}] tap ignored (wrong state)")
+            return
+
+        authorised = self.payments.authorise(token, amount_pence=200)
+
+        if not authorised:
+            self._fail_safe(session, "payment_failed")
+            return
+
+        session.authorised = True
+        session.state = LaneState.AUTHORISED
+        log.info(f"[{lane_id}] payment authorised")
+
+        self.barrier.open(lane_id)
+        session.state = LaneState.BARRIER_OPEN
+        session.refresh_timeout(30)
+
+    def _fail_safe(self, session: LaneSession, reason: str):
+        """
+        Default safe behaviour:
+        keep the barrier closed and flag the session.
+        """
+        try:
+            self.barrier.close(session.lane_id)
+        except Exception:
+            pass
+
+        session.state = LaneState.ERROR
+        log.error(f"[{session.lane_id}] fail-safe triggered: {reason}")
